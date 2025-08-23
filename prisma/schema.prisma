@@ -14,28 +14,80 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id             String    @id @default(cuid())
-  name           String?
-  email          String?   @unique
-  emailVerified  DateTime?
-  image          String?
-  hashedPassword String?
-
-  accounts       Account[]
-  sessions       Session[]
-  events         Event[]    @relation("OrganizerEvents")
-  participations Participant[]
-
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+// Enhanced User Profile model with normalization
+model UserProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  firstName   String
+  lastName    String
+  displayName String?
+  bio         String?
+  avatar      String?
+  phone       String?
+  dateOfBirth DateTime?
+  gender      Gender?
+  location    String?
+  timezone    String?
+  
+  // Social media links (expandable)
+  socialLinks SocialLink[]
+  
+  // User preferences
+  preferences UserPreferences?
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([firstName, lastName])
+  @@index([location])
 }
 
+// Enhanced User model for authentication
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  emailVerified  DateTime?
+  
+  // Profile relation
+  profile        UserProfile?
+  
+  // Authentication methods (expandable for future SSO)
+  accounts       Account[]
+  sessions       Session[]
+  
+  // Password-based authentication
+  passwordHash   String?
+  passwordSalt   String?
+  passwordResetToken String?
+  passwordResetExpires DateTime?
+  
+  // Account status
+  isActive       Boolean   @default(true)
+  isVerified     Boolean   @default(false)
+  lastLoginAt    DateTime?
+  
+  // Event relationships
+  events         Event[]    @relation("OrganizerEvents")
+  participations Participant[]
+  
+  // Timestamps
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  
+  @@index([email])
+  @@index([isActive])
+}
+
+// Enhanced Account model for OAuth/SSO providers
 model Account {
   id                String  @id @default(cuid())
   userId            String
-  type              String
-  provider          String
+  type              String  // oauth, oidc, email
+  provider          String  // google, apple, facebook, email
   providerAccountId String
   refresh_token     String?
   access_token      String?
@@ -46,33 +98,108 @@ model Account {
   session_state     String?
   oauth_token_secret String?
   oauth_token        String?
-
+  
+  // Additional SSO metadata
+  providerData      Json?   // Store provider-specific data
+  isVerified        Boolean @default(false)
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  
   @@unique([provider, providerAccountId])
+  @@index([provider])
+  @@index([userId])
 }
 
+// Social media links for user profiles
+model SocialLink {
+  id       String   @id @default(cuid())
+  profileId String
+  platform String   // twitter, linkedin, instagram, etc.
+  url      String
+  username String?
+  
+  // Relations
+  profile  UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  @@unique([profileId, platform])
+  @@index([platform])
+}
+
+// User preferences for customization
+model UserPreferences {
+  id                String   @id @default(cuid())
+  profileId         String   @unique
+  language          String   @default("en")
+  theme             String   @default("light")
+  emailNotifications Boolean @default(true)
+  pushNotifications Boolean @default(true)
+  privacyLevel      PrivacyLevel @default(PUBLIC)
+  
+  // Event preferences
+  eventNotifications Boolean @default(true)
+  maxEventDistance  Int?     // in miles/km
+  
+  // Relations
+  profile           UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// Session management
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique
   userId       String
   expires      DateTime
+  ipAddress    String?
+  userAgent    String?
+  
+  // Relations
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([expires])
 }
 
+// Email verification tokens
 model VerificationToken {
   identifier String
   token      String   @unique
   expires    DateTime
-
+  
   @@unique([identifier, token])
+}
+
+// Enums
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum PrivacyLevel {
+  PRIVATE
+  FRIENDS_ONLY
+  PUBLIC
 }
 
 enum GameType {
   SOCCER
   CRICKET
+  COOKING
+  TECH
+  WELLNESS
 }
 
+// Event model (enhanced)
 model Event {
   id             String    @id @default(cuid())
   title          String
@@ -82,28 +209,48 @@ model Event {
   startTime      DateTime
   maxPlayers     Int
   costPerPlayer  Decimal   @db.Decimal(10,2)
-
+  
+  // Enhanced fields
+  isActive       Boolean   @default(true)
+  isPublic       Boolean   @default(true)
+  tags           String[]  // Array of tags
+  
   organizerId    String
   organizer      User      @relation("OrganizerEvents", fields: [organizerId], references: [id], onDelete: Cascade)
-
+  
   participants   Participant[]
-
+  
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
-
+  
   @@index([startTime])
   @@index([gameType])
+  @@index([isActive])
+  @@index([tags])
 }
 
+// Participant model (enhanced)
 model Participant {
   id        String   @id @default(cuid())
   userId    String
   eventId   String
   joinedAt  DateTime @default(now())
-
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-
+  
+  // Enhanced fields
+  status    ParticipantStatus @default(REGISTERED)
+  notes     String?
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
   @@unique([userId, eventId])
   @@index([eventId])
+  @@index([status])
+}
+
+enum ParticipantStatus {
+  REGISTERED
+  CONFIRMED
+  CANCELLED
+  WAITLISTED
 }

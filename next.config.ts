@@ -5,11 +5,12 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "2mb",
     },
-    optimizePackageImports: [
-      "@mui/material",
-      "@mui/icons-material",
-      "@mui/x-date-pickers",
-    ],
+    // Temporarily disabled to fix Webpack module resolution error
+    // optimizePackageImports: [
+    //   "@mui/material",
+    //   "@mui/icons-material",
+    //   "@mui/x-date-pickers",
+    // ],
   },
 };
 

@@ -48,11 +48,21 @@ export const authOptions: NextAuthOptions = {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
         const { email, password } = parsed.data;
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user || !user.hashedPassword) return null;
-        const match = await bcrypt.compare(password, user.hashedPassword);
+        const user = await prisma.user.findUnique({ 
+          where: { email },
+          include: { profile: true }
+        });
+        if (!user || !user.passwordHash) return null;
+        const match = await bcrypt.compare(password, user.passwordHash);
         if (!match) return null;
-        return { id: user.id, email: user.email ?? undefined, name: user.name ?? undefined, image: user.image ?? undefined };
+        
+        // Return user data with profile information
+        return { 
+          id: user.id, 
+          email: user.email, 
+          name: user.profile ? `${user.profile.firstName} ${user.profile.lastName}` : undefined,
+          image: user.profile?.avatar
+        };
       },
     }),
   ],

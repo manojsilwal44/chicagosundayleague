@@ -40,14 +40,41 @@ export default function EventSummary({ events }: { events: EventItem[] }) {
                 alignItems: "center",
                 justifyContent: "center",
                 color: "text.secondary",
+                backgroundImage: `url(${getPlaceholderImage(ev.title)})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
+                position: "relative",
               }}
             >
-              {ev.title}
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  backgroundColor: "rgba(0, 0, 0, 0.1)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "text.secondary",
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  opacity: 0,
+                  transition: "opacity 0.2s",
+                  "&:hover": {
+                    opacity: 1,
+                  }
+                }}
+              >
+                {ev.title}
+              </Box>
             </Box>
             <CardContent>
               <Typography variant="h6">{ev.title}</Typography>
               <Typography variant="body2" color="text.secondary">
-                {new Date(ev.startTime).toLocaleDateString()}
+                {formatDate(ev.startTime)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {ev.location}
@@ -60,13 +87,38 @@ export default function EventSummary({ events }: { events: EventItem[] }) {
   );
 }
 
+function formatDate(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  } catch {
+    return "TBD";
+  }
+}
+
+function getPlaceholderImage(title: string): string {
+  const images = {
+    "Cooking Class": "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&h=300&q=80",
+    "Tech Conference": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&h=300&q=80",
+    "Tech Retreat": "https://images.unsplash.com/photo-1515187029135-18ee286d815b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&h=300&q=80",
+    "Yoga Retreat": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&h=300&q=80",
+    "default": "https://images.unsplash.com/photo-1514517210722-6b38559d5c05?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&h=300&q=80"
+  };
+  
+  return images[title as keyof typeof images] || images.default;
+}
+
 const defaultPlaceholders: EventItem[] = [
   {
     id: "ph-1",
     title: "Cooking Class",
     location: "Downtown",
     startTime: "2025-01-15T10:00:00.000Z",
-    gameType: "SOCCER",
+    gameType: "COOKING",
     participants: [],
     maxPlayers: 20,
   },
@@ -75,7 +127,7 @@ const defaultPlaceholders: EventItem[] = [
     title: "Tech Conference",
     location: "Riverside",
     startTime: "2025-01-16T14:00:00.000Z",
-    gameType: "CRICKET",
+    gameType: "TECH",
     participants: [],
     maxPlayers: 20,
   },
@@ -84,7 +136,7 @@ const defaultPlaceholders: EventItem[] = [
     title: "Tech Retreat",
     location: "West Park",
     startTime: "2025-01-17T09:00:00.000Z",
-    gameType: "SOCCER",
+    gameType: "TECH",
     participants: [],
     maxPlayers: 20,
   },
@@ -93,7 +145,7 @@ const defaultPlaceholders: EventItem[] = [
     title: "Yoga Retreat",
     location: "Seaside",
     startTime: "2025-01-18T16:00:00.000Z",
-    gameType: "CRICKET",
+    gameType: "WELLNESS",
     participants: [],
     maxPlayers: 20,
   },

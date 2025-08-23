@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { AppRouterCacheProvider } from "@mui/material-nextjs/v14-appRouter";
+import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import { SessionProvider } from "next-auth/react";
 import { LocalizationProvider } from "@mui/x-date-pickers";
