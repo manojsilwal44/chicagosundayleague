@@ -22,9 +22,9 @@ export default async function ProfilePage() {
           <Box>
             <Typography variant="h6" sx={{ mb: 1 }}>My Created Events</Typography>
             <List>
-              {events.map((e: { id: string; title: string; gameType: string; startTime: Date | string }) => (
+              {events.map((e: { id: string; title: string; eventType: string; startTime: Date | string }) => (
                 <ListItem key={e.id} component={Link} href={`/events/${e.id}`}>
-                  <ListItemText primary={e.title} secondary={`${e.gameType} • ${new Date(e.startTime).toLocaleString()}`} />
+                  <ListItemText primary={e.title} secondary={`${e.eventType} • ${new Date(e.startTime).toLocaleString()}`} />
                 </ListItem>
               ))}
             </List>

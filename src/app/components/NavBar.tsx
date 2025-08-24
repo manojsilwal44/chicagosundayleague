@@ -10,6 +10,8 @@ import NextLink from "next/link";
 import MuiLink from "@mui/material/Link";
 import StarIcon from "@mui/icons-material/Star";
 import SignupModal from "./SignupModal";
+import SessionWarningModal from "./SessionWarningModal";
+import { useSessionManager } from "../../hooks/useSessionManager";
 
 interface UserData {
   firstName: string;
@@ -28,7 +30,7 @@ export default function NavBar() {
     px: 2, 
     py: 1.5, 
     borderRadius: 1, 
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 500,
     "&:hover": {
       backgroundColor: "rgba(0, 0, 0, 0.04)"
@@ -53,12 +55,26 @@ export default function NavBar() {
     setUserData(userData);
     // Store user data in localStorage for persistence
     localStorage.setItem("playonUserData", JSON.stringify(userData));
+    
+    // Check if there's a redirect after login
+    const redirectPath = localStorage.getItem("redirectAfterLogin");
+    if (redirectPath) {
+      localStorage.removeItem("redirectAfterLogin");
+      window.location.href = redirectPath;
+    }
   };
 
   const handleLoginSuccess = (userData: UserData) => {
     setUserData(userData);
     // Store user data in localStorage for persistence
     localStorage.setItem("playonUserData", JSON.stringify(userData));
+    
+    // Check if there's a redirect after login
+    const redirectPath = localStorage.getItem("redirectAfterLogin");
+    if (redirectPath) {
+      localStorage.removeItem("redirectAfterLogin");
+      window.location.href = redirectPath;
+    }
   };
 
   // Load user data from localStorage on component mount
@@ -72,6 +88,27 @@ export default function NavBar() {
   const handleLogout = () => {
     setUserData(null);
     localStorage.removeItem("playonUserData");
+  };
+
+  // Session management
+  const { isWarningShown, timeRemaining, extendSession, logout: sessionLogout } = useSessionManager({
+    sessionTimeout: 15 * 60 * 1000, // 15 minutes
+    warningTimeout: 60 * 1000, // 60 seconds
+    onSessionExpired: () => {
+      setUserData(null);
+      localStorage.removeItem("playonUserData");
+    },
+    onShowWarning: () => {
+      // Warning modal will be shown automatically
+    }
+  });
+
+  const handleExtendSession = () => {
+    extendSession();
+  };
+
+  const handleSessionLogout = () => {
+    sessionLogout();
   };
   
   return (
@@ -112,7 +149,7 @@ export default function NavBar() {
           <Box sx={{ ml: "auto", display: "flex", gap: 1, alignItems: "center" }}>
             {userData ? (
               <>
-                <Button color="inherit" component={NextLink} href="/profile" sx={{ textTransform: "none" }}>Profile</Button>
+                <Button color="inherit" component={NextLink} href="/profile" sx={{ textTransform: "none", fontSize: 16, fontWeight: 500 }}>Profile</Button>
                 <Box
                   sx={{
                     width: 40,
@@ -138,7 +175,7 @@ export default function NavBar() {
                 >
                   {userData.firstName.charAt(0).toUpperCase()}
                 </Box>
-                <Button color="inherit" onClick={handleLogout} sx={{ textTransform: "none" }}>Log Out</Button>
+                <Button color="inherit" onClick={handleLogout} sx={{ textTransform: "none", fontSize: 16, fontWeight: 500 }}>Log Out</Button>
               </>
             ) : (
               <>
@@ -147,6 +184,8 @@ export default function NavBar() {
                   onClick={handleOpenLoginModal} 
                   sx={{ 
                     textTransform: "none",
+                    fontSize: 16,
+                    fontWeight: 500,
                     color: "rgba(0, 0, 0, 0.87)",
                     "&:hover": {
                       backgroundColor: "rgba(0, 0, 0, 0.04)"
@@ -160,6 +199,8 @@ export default function NavBar() {
                   onClick={handleOpenSignupModal} 
                   sx={{ 
                     textTransform: "none", 
+                    fontSize: 16,
+                    fontWeight: 500,
                     borderRadius: 2,
                     bgcolor: "#1976d2",
                     "&:hover": {
@@ -182,6 +223,13 @@ export default function NavBar() {
         onSignupSuccess={handleSignupSuccess} 
         onLoginSuccess={handleLoginSuccess} 
         mode={authMode} 
+      />
+      
+      <SessionWarningModal
+        open={isWarningShown && !!userData}
+        timeRemaining={timeRemaining}
+        onExtendSession={handleExtendSession}
+        onLogout={handleSessionLogout}
       />
     </>
   );

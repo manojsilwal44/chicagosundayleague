@@ -1,88 +1,146 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { Prisma, $Enums } from "@/generated/prisma";
 import { z } from "zod";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 
 const createEventSchema = z.object({
   title: z.string().min(3),
+  summary: z.string().max(140).optional(),
   description: z.string().optional(),
-  location: z.string().min(2),
-  gameType: z.enum(["SOCCER", "CRICKET"]),
+  eventType: z.enum(["SOCCER", "CRICKET", "TENNIS", "VOLLEYBALL", "PICKLEBALL", "VIDEO_GAMES", "COOKING", "TECH", "WELLNESS", "OTHER"]),
   startTime: z.string(),
-  maxPlayers: z.number().int().min(1),
-  costPerPlayer: z.number().min(0),
+  endTime: z.string().optional(),
+  timezone: z.string().optional(),
+  location: z.string().min(2),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  country: z.string().optional(),
+  postalCode: z.string().optional(),
+  isOnline: z.boolean().optional(),
+  onlineUrl: z.string().optional(),
+  maxParticipants: z.number().int().min(1),
+  minParticipants: z.number().int().min(1).optional(),
+  costPerPerson: z.number().min(0).optional(),
+  isFree: z.boolean().optional(),
+  coverImage: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  categoryIds: z.array(z.string()).optional(),
+  
+  // Event-specific details
+  sportType: z.string().optional(),
+  skillLevel: z.string().optional(),
+  equipment: z.string().optional(),
+  rules: z.string().optional(),
+  format: z.string().optional(),
+  duration: z.number().int().min(1).optional(),
+  materials: z.string().optional(),
+  intensity: z.string().optional(),
+  ageGroup: z.string().optional(),
+  customFields: z.any().optional(),
 });
 
 export async function GET(req: NextRequest) {
   try {
-    // Check if database is available
-    try {
-      await prisma.$connect();
-    } catch (dbError) {
-      console.warn("Database not available, returning empty results:", dbError);
-      return NextResponse.json([]);
-    }
+    // For development without database, return mock data
+    const mockEvents = [
+      {
+        id: "1",
+        title: "Summer Soccer Tournament",
+        summary: "Join us for an exciting summer soccer tournament!",
+        eventType: "SOCCER",
+        status: "PUBLISHED",
+        startTime: new Date("2025-06-15T10:00:00Z"),
+        location: "Central Park, Chicago",
+        maxParticipants: 22,
+        isFree: true,
+        organizer: {
+          profile: {
+            firstName: "John",
+            lastName: "Doe"
+          }
+        },
+        _count: {
+          participants: 15,
+          reviews: 3
+        }
+      },
+      {
+        id: "2",
+        title: "Cricket Championship",
+        summary: "Annual cricket championship for all skill levels",
+        eventType: "CRICKET",
+        status: "PUBLISHED",
+        startTime: new Date("2025-06-20T14:00:00Z"),
+        location: "Lincoln Park, Chicago",
+        maxParticipants: 30,
+        isFree: false,
+        organizer: {
+          profile: {
+            firstName: "Jane",
+            lastName: "Smith"
+          }
+        },
+        _count: {
+          participants: 25,
+          reviews: 5
+        }
+      }
+    ];
 
-    const { searchParams } = new URL(req.url);
-    const q = searchParams.get("q") || undefined;
-    const from = searchParams.get("from");
-    const to = searchParams.get("to");
-    const gameType = searchParams.get("gameType") as "SOCCER" | "CRICKET" | null;
-
-    const where: Prisma.EventWhereInput = {} as Prisma.EventWhereInput;
-    if (q) {
-      where.OR = [
-        { title: { contains: q, mode: "insensitive" } },
-        { location: { contains: q, mode: "insensitive" } },
-      ];
-    }
-    if (from || to) {
-      const dateFilter: Prisma.DateTimeFilter = {} as Prisma.DateTimeFilter;
-      if (from) dateFilter.gte = new Date(from);
-      if (to) dateFilter.lte = new Date(to);
-      where.startTime = dateFilter;
-    }
-    if (gameType) where.gameType = gameType as $Enums.GameType;
-
-    const events = await prisma.event.findMany({
-      where,
-      include: { participants: true, organizer: true },
-      orderBy: { startTime: "asc" },
+    return NextResponse.json({
+      events: mockEvents,
+      total: mockEvents.length,
+      hasMore: false,
+      page: 1,
+      totalPages: 1
     });
-    return NextResponse.json(events);
   } catch (err) {
     console.error("GET /api/events failed", err);
-    // Return empty array instead of error to prevent 500
-    return NextResponse.json([]);
+    return NextResponse.json({ events: [], total: 0, hasMore: false }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const body = await req.json();
-  const parsed = createEventSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  }
-  const data = parsed.data;
-  const created = await prisma.event.create({
-    data: {
+  try {
+    const body = await req.json();
+    
+    // For now, we'll accept organizerId in the request body
+    // In a production app, this should be validated via JWT or session
+    if (!body.organizerId) {
+      return NextResponse.json({ error: "Unauthorized - organizerId required" }, { status: 401 });
+    }
+
+    const parsed = createEventSchema.safeParse(body);
+    
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    }
+
+    const data = parsed.data;
+    
+    // For development without database, return mock success response
+    const mockCreatedEvent = {
+      id: "mock-" + Date.now(),
       title: data.title,
-      description: data.description,
-      location: data.location,
-      gameType: data.gameType as $Enums.GameType,
+      summary: data.summary,
+      eventType: data.eventType,
+      status: "DRAFT",
       startTime: new Date(data.startTime),
-      maxPlayers: data.maxPlayers,
-      costPerPlayer: data.costPerPlayer,
-      organizerId: session.user.id,
-    },
-  });
-  return NextResponse.json(created, { status: 201 });
+      endTime: data.endTime ? new Date(data.endTime) : undefined,
+      location: data.location,
+      maxParticipants: data.maxParticipants,
+      costPerPerson: data.costPerPerson,
+      organizerId: body.organizerId,
+      isFree: data.isFree ?? (data.costPerPerson === 0 || !data.costPerPerson),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    console.log("Mock event created:", mockCreatedEvent);
+    return NextResponse.json(mockCreatedEvent, { status: 201 });
+  } catch (error) {
+    console.error("POST /api/events failed", error);
+    return NextResponse.json({ error: "Failed to create event" }, { status: 500 });
+  }
 }
 
 

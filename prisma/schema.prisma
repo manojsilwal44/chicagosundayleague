@@ -73,6 +73,8 @@ model User {
   // Event relationships
   events         Event[]    @relation("OrganizerEvents")
   participations Participant[]
+  eventReviews   EventReview[]
+  eventWaitlist  EventWaitlist[]
   
   // Timestamps
   createdAt      DateTime  @default(now())
@@ -191,42 +193,169 @@ enum PrivacyLevel {
   PUBLIC
 }
 
-enum GameType {
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+  ARCHIVED
+}
+
+enum EventType {
   SOCCER
   CRICKET
+  TENNIS
+  VOLLEYBALL
+  PICKLEBALL
+  VIDEO_GAMES
   COOKING
   TECH
   WELLNESS
+  OTHER
 }
 
-// Event model (enhanced)
+enum ParticipantStatus {
+  REGISTERED
+  CONFIRMED
+  CANCELLED
+  WAITLISTED
+  NO_SHOW
+}
+
+// Core Event model (normalized)
 model Event {
-  id             String    @id @default(cuid())
-  title          String
-  description    String?
-  location       String
-  gameType       GameType
-  startTime      DateTime
-  maxPlayers     Int
-  costPerPlayer  Decimal   @db.Decimal(10,2)
+  id          String      @id @default(cuid())
   
-  // Enhanced fields
-  isActive       Boolean   @default(true)
-  isPublic       Boolean   @default(true)
-  tags           String[]  // Array of tags
+  // Basic Information
+  title       String
+  summary     String?     // Short description (140 chars max)
+  description String?     // Detailed description
   
-  organizerId    String
-  organizer      User      @relation("OrganizerEvents", fields: [organizerId], references: [id], onDelete: Cascade)
+  // Event Type and Status
+  eventType   EventType
+  status      EventStatus @default(DRAFT)
   
-  participants   Participant[]
+  // Timing
+  startTime   DateTime
+  endTime     DateTime?
+  timezone    String?
   
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  // Location
+  location    String
+  address     String?
+  city        String?
+  state       String?
+  country     String?
+  postalCode  String?
+  isOnline    Boolean     @default(false)
+  onlineUrl   String?
+  
+  // Capacity and Pricing
+  maxParticipants Int
+  minParticipants Int?
+  costPerPerson   Decimal? @db.Decimal(10,2)
+  isFree          Boolean  @default(true)
+  
+  // Organizer
+  organizerId String
+  organizer   User       @relation("OrganizerEvents", fields: [organizerId], references: [id], onDelete: Cascade)
+  
+  // Media
+  coverImage  String?
+  images      EventImage[]
+  
+  // Metadata
+  tags        String[]
+  categories  EventCategory[]
+  isPublic    Boolean    @default(true)
+  isActive    Boolean    @default(true)
+  
+  // Timestamps
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  publishedAt DateTime?
+  
+  // Relations
+  participants Participant[]
+  eventDetails EventDetails?
+  reviews     EventReview[]
+  waitlist    EventWaitlist[]
   
   @@index([startTime])
-  @@index([gameType])
+  @@index([eventType])
+  @@index([status])
   @@index([isActive])
   @@index([tags])
+  @@index([location])
+  @@index([organizerId])
+}
+
+// Event Details model for type-specific fields (expandable)
+model EventDetails {
+  id        String   @id @default(cuid())
+  eventId   String  @unique
+  
+  // Sports-specific fields
+  sportType String?  // For sports events
+  skillLevel String? // beginner, intermediate, advanced
+  equipment String?  // Required equipment
+  rules     String?  // Event-specific rules
+  
+  // Tech/Workshop fields
+  format    String?  // workshop, conference, meetup
+  duration  Int?     // Duration in minutes
+  materials String?  // Required materials
+  
+  // Wellness/Activity fields
+  intensity String?  // low, medium, high
+  ageGroup  String?  // target age group
+  
+  // Custom fields (JSON for future extensibility)
+  customFields Json?
+  
+  // Relations
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  @@index([sportType])
+  @@index([skillLevel])
+  @@index([format])
+}
+
+// Event Categories for better organization
+model EventCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  icon        String?
+  color       String?
+  isActive    Boolean  @default(true)
+  
+  // Relations
+  events      Event[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([name])
+  @@index([isActive])
+}
+
+// Event Images for multiple image support
+model EventImage {
+  id        String   @id @default(cuid())
+  eventId   String
+  imageUrl  String
+  altText   String?
+  isPrimary Boolean  @default(false)
+  order     Int      @default(0)
+  
+  // Relations
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  
+  @@index([eventId])
+  @@index([isPrimary])
 }
 
 // Participant model (enhanced)
@@ -239,6 +368,12 @@ model Participant {
   // Enhanced fields
   status    ParticipantStatus @default(REGISTERED)
   notes     String?
+  waitlistPosition Int?
+  
+  // Payment information
+  hasPaid   Boolean  @default(false)
+  paymentAmount Decimal? @db.Decimal(10,2)
+  paymentMethod String?
   
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
@@ -246,11 +381,44 @@ model Participant {
   @@unique([userId, eventId])
   @@index([eventId])
   @@index([status])
+  @@index([hasPaid])
 }
 
-enum ParticipantStatus {
-  REGISTERED
-  CONFIRMED
-  CANCELLED
-  WAITLISTED
+// Event Reviews and Ratings
+model EventReview {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  rating    Int      // 1-5 stars
+  comment   String?
+  isPublic  Boolean  @default(true)
+  
+  // Relations
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([userId, eventId])
+  @@index([eventId])
+  @@index([rating])
+}
+
+// Event Waitlist for overflow management
+model EventWaitlist {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  position  Int
+  joinedAt  DateTime @default(now())
+  notifiedAt DateTime?
+  
+  // Relations
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, eventId])
+  @@index([eventId])
+  @@index([position])
 }

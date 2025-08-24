@@ -17,7 +17,7 @@ export async function POST(_req: NextRequest, context: { params: Promise<{ id: s
   });
   if (!event) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  if (event.participants.length >= event.maxPlayers) {
+  if (event.participants.length >= event.maxParticipants) {
     return NextResponse.json({ error: "Event is full" }, { status: 400 });
   }
 

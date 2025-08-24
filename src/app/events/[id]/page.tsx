@@ -17,10 +17,10 @@ export default async function EventDetail({ params }: { params: Promise<{ id: st
         <Typography variant="h4" sx={{ mb: 2 }}>{event.title}</Typography>
         <Typography variant="body1" sx={{ mb: 1 }}>{event.description}</Typography>
         <Typography variant="body2" sx={{ mb: 1 }}>
-          {event.gameType} • {new Date(event.startTime).toLocaleString()} • {event.location}
+          {event.eventType} • {new Date(event.startTime).toLocaleString()} • {event.location}
         </Typography>
         <Typography variant="body2" sx={{ mb: 2 }}>
-          Players: {event.participants.length} / {event.maxPlayers} • Cost: ${event.costPerPlayer.toString()}
+          Players: {event.participants.length} / {event.maxParticipants} • Cost: ${event.costPerPerson?.toString() || 'Free'}
         </Typography>
         <Box>
           <form action={`/api/events/${event.id}/join`} method="post">

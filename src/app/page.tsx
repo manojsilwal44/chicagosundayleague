@@ -1,11 +1,18 @@
 "use client";
 import * as React from "react";
 import NavBar from "./components/NavBar";
+import Footer from "./components/Footer";
 import { Box, Card, CardContent, CardActions, Typography, Button, Paper, InputBase, IconButton } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ConfirmationNumberIcon from "@mui/icons-material/ConfirmationNumber";
+import SportsCricketIcon from "@mui/icons-material/SportsCricket";
+import SportsSoccerIcon from "@mui/icons-material/SportsSoccer";
+import SportsTennisIcon from "@mui/icons-material/SportsTennis";
+import SportsEsportsIcon from "@mui/icons-material/SportsEsports";
+import SportsIcon from "@mui/icons-material/Sports";
+import SportsVolleyballIcon from "@mui/icons-material/SportsVolleyball";
  
 
 type EventDto = {
@@ -107,6 +114,194 @@ export default function Home() {
         </Paper>
       </Box>
 
+      {/* Explore Categories Section */}
+      <Box sx={{ px: { xs: 3, sm: 4, md: 6 }, py: 6, bgcolor: '#fff' }}>
+        <Typography variant="h4" component="h2" sx={{ fontWeight: 700, mb: 4, color: 'text.primary' }}>
+          Explore top categories
+        </Typography>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "1fr 1fr 1fr", lg: "repeat(6, 1fr)" }, gap: 2 }}>
+          {/* Cricket */}
+          <Box 
+            sx={{ 
+              bgcolor: 'grey.50', 
+              borderRadius: 2, 
+              p: 2, 
+              textAlign: 'center', 
+              cursor: 'pointer',
+              '&:hover': { bgcolor: 'grey.100' },
+              transition: 'background-color 0.2s ease'
+            }}
+          >
+            <Box sx={{ 
+              width: 56, 
+              height: 56, 
+              mx: 'auto', 
+              mb: 1.5, 
+              bgcolor: 'green.100', 
+              borderRadius: '50%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}>
+              <SportsCricketIcon sx={{ fontSize: 40, color: '#16a34a' }} />
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
+              Cricket
+            </Typography>
+          </Box>
+
+          {/* Soccer */}
+          <Box 
+            sx={{ 
+              bgcolor: 'grey.50', 
+              borderRadius: 2, 
+              p: 2, 
+              textAlign: 'center', 
+              cursor: 'pointer',
+              '&:hover': { bgcolor: 'grey.100' },
+              transition: 'background-color 0.2s ease'
+            }}
+          >
+            <Box sx={{ 
+              width: 56, 
+              height: 56, 
+              mx: 'auto', 
+              mb: 1.5, 
+              bgcolor: 'blue.100', 
+              borderRadius: '50%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}>
+              <SportsSoccerIcon sx={{ fontSize: 40, color: '#2563eb' }} />
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
+              Soccer
+            </Typography>
+          </Box>
+
+          {/* Pickleball */}
+          <Box 
+            sx={{ 
+              bgcolor: 'grey.50', 
+              borderRadius: 2, 
+              p: 2, 
+              textAlign: 'center', 
+              cursor: 'pointer',
+              '&:hover': { bgcolor: 'grey.100' },
+              transition: 'background-color 0.2s ease'
+            }}
+          >
+            <Box sx={{ 
+              width: 56, 
+              height: 56, 
+              mx: 'auto', 
+              mb: 1.5, 
+              bgcolor: 'purple.100', 
+              borderRadius: '50%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}>
+              <SportsIcon sx={{ fontSize: 40, color: '#9333ea' }} />
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
+              Pickleball
+            </Typography>
+          </Box>
+
+          {/* Tennis */}
+          <Box 
+            sx={{ 
+              bgcolor: 'grey.50', 
+              borderRadius: 2, 
+              p: 2, 
+              textAlign: 'center', 
+              cursor: 'pointer',
+              '&:hover': { bgcolor: 'grey.100' },
+              transition: 'background-color 0.2s ease'
+            }}
+          >
+            <Box sx={{ 
+              width: 56, 
+              height: 56, 
+              mx: 'auto', 
+              mb: 1.5, 
+              bgcolor: 'orange.100', 
+              borderRadius: '50%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}>
+              <SportsTennisIcon sx={{ fontSize: 40, color: '#ea580c' }} />
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
+              Tennis
+            </Typography>
+          </Box>
+
+          {/* Volleyball */}
+          <Box 
+            sx={{ 
+              bgcolor: 'grey.50', 
+              borderRadius: 2, 
+              p: 2, 
+              textAlign: 'center', 
+              cursor: 'pointer',
+              '&:hover': { bgcolor: 'grey.100' },
+              transition: 'background-color 0.2s ease'
+            }}
+          >
+            <Box sx={{ 
+              width: 56, 
+              height: 56, 
+              mx: 'auto', 
+              mb: 1.5, 
+              bgcolor: 'teal.100', 
+              borderRadius: '50%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}>
+              <SportsVolleyballIcon sx={{ fontSize: 40, color: '#0d9488' }} />
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
+              Volleyball
+            </Typography>
+          </Box>
+
+          {/* Video Games */}
+          <Box 
+            sx={{ 
+              bgcolor: 'grey.50', 
+              borderRadius: 2, 
+              p: 2, 
+              textAlign: 'center', 
+              cursor: 'pointer',
+              '&:hover': { bgcolor: 'grey.100' },
+              transition: 'background-color 0.2s ease'
+            }}
+          >
+            <Box sx={{ 
+              width: 56, 
+              height: 56, 
+              mx: 'auto', 
+              mb: 1.5, 
+              bgcolor: 'red.100', 
+              borderRadius: '50%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}>
+              <SportsEsportsIcon sx={{ fontSize: 40, color: '#dc2626' }} />
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
+              Video Games
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+
       <Box sx={{ px: { xs: 3, sm: 4, md: 6 }, py: 6, bgcolor: '#fff' }}>
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "1fr 1fr 1fr" }, gap: 4 }}>
           {displayEvents.map(ev => (
@@ -173,6 +368,7 @@ export default function Home() {
           ))}
         </Box>
       </Box>
+      <Footer />
     </>
   );
 }
