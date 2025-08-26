@@ -54,30 +54,102 @@ export default function CreatePage() {
       return;
     }
 
+    // Basic validation
+    if (!title.trim() || !eventType || !location.trim() || !startTime) {
+      setError("Please fill in all required fields");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const res = await fetch("/api/events", {
+      const eventData = {
+        title: title.trim(),
+        summary: summary.trim() || undefined,
+        eventType,
+        location: location.trim(),
+        startTime: startTime?.toISOString(),
+        maxParticipants: maxPlayers,
+        costPerPerson: costPerPlayer > 0 ? costPerPlayer : undefined,
+        description: description.trim() || undefined,
+        coverImage: coverImage ? coverImage.name : undefined,
+        organizerId: userData.id,
+        isFree: costPerPlayer === 0,
+      };
+
+      console.log("Publishing event with data:", eventData);
+
+      const res = await fetch("/api/events/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          summary,
-          eventType,
-          location,
-          startTime: startTime?.toISOString(),
-          maxParticipants: maxPlayers,
-          costPerPerson: costPerPlayer,
-          description,
-          coverImage: coverImage ? coverImage.name : null,
-          organizerId: userData.id,
-        }),
+        body: JSON.stringify(eventData),
       });
       
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.error || "Failed to create event");
+        throw new Error(errorData.error || "Failed to publish event");
       }
       
+      const result = await res.json();
+      console.log("Event published successfully:", result);
       router.push("/");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveAsDraft = async () => {
+    setError(null);
+    setLoading(true);
+
+    // Check if user is authenticated
+    if (!userData?.id) {
+      setError("Please sign in to save an event");
+      setLoading(false);
+      return;
+    }
+
+    // Basic validation for draft (can be less strict)
+    if (!title.trim()) {
+      setError("Please provide at least a title for the draft");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const eventData = {
+        title: title.trim(),
+        summary: summary.trim() || undefined,
+        eventType: eventType || undefined,
+        location: location.trim() || undefined,
+        startTime: startTime?.toISOString(),
+        maxParticipants: maxPlayers,
+        costPerPerson: costPerPlayer > 0 ? costPerPlayer : undefined,
+        description: description.trim() || undefined,
+        coverImage: coverImage ? coverImage.name : undefined,
+        organizerId: userData.id,
+        isFree: costPerPlayer === 0,
+      };
+
+      console.log("Saving draft with data:", eventData);
+
+      const res = await fetch("/api/events/draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(eventData),
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to save event as draft");
+      }
+      
+      const result = await res.json();
+      console.log("Event saved as draft successfully:", result);
+      // Optionally redirect to profile page or show success message
+      router.push("/profile");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       setError(message);
@@ -415,13 +487,16 @@ export default function CreatePage() {
           <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
             <Button
               variant="text"
+              onClick={handleSaveAsDraft}
+              disabled={loading}
+              type="button"
               sx={{ 
                 color: "text.secondary",
                 textTransform: "none",
                 fontSize: "1rem"
               }}
             >
-              Save as Draft
+              {loading ? "Saving..." : "Save as Draft"}
             </Button>
             <Button
               type="submit"
@@ -436,7 +511,7 @@ export default function CreatePage() {
                 borderRadius: 1
               }}
             >
-              {loading ? "Creating..." : "Publish Event"}
+              {loading ? "Publishing..." : "Publish Event"}
             </Button>
           </Box>
         </Box>

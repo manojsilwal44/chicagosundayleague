@@ -16,6 +16,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import StarIcon from "@mui/icons-material/Star";
 
 interface UserData {
+  id: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -101,6 +102,7 @@ export default function SignupModal({ open, onClose, mode, onSignupSuccess, onLo
         
         // Call the success callback with user data
         onSignupSuccess({
+          id: result.user.id,
           firstName: result.user.firstName,
           lastName: result.user.lastName,
           email: result.user.email,
@@ -127,6 +129,7 @@ export default function SignupModal({ open, onClose, mode, onSignupSuccess, onLo
         
         // Call the success callback with user data
         onLoginSuccess({
+          id: result.user.id,
           firstName: result.user.firstName,
           lastName: result.user.lastName,
           email: result.user.email,

@@ -2,7 +2,7 @@
 import * as React from "react";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
-import { SessionProvider } from "next-auth/react";
+// Removed next-auth SessionProvider since we're using custom authentication
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 
@@ -16,16 +16,14 @@ const theme = createTheme({
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider>
-      <AppRouterCacheProvider>
-        <ThemeProvider theme={theme}>
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <CssBaseline />
-            {children}
-          </LocalizationProvider>
-        </ThemeProvider>
-      </AppRouterCacheProvider>
-    </SessionProvider>
+    <AppRouterCacheProvider>
+      <ThemeProvider theme={theme}>
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <CssBaseline />
+          {children}
+        </LocalizationProvider>
+      </ThemeProvider>
+    </AppRouterCacheProvider>
   );
 }
 

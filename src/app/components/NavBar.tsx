@@ -14,6 +14,7 @@ import SessionWarningModal from "./SessionWarningModal";
 import { useSessionManager } from "../../hooks/useSessionManager";
 
 interface UserData {
+  id: string;
   firstName: string;
   lastName: string;
   email: string;

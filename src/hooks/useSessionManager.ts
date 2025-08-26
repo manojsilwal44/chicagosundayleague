@@ -13,6 +13,7 @@ export const useSessionManager = (options: SessionManagerOptions) => {
   const sessionTimerRef = useRef<NodeJS.Timeout | null>(null);
   const warningTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
+  const inactivityCheckRef = useRef<NodeJS.Timeout | null>(null);
 
   const resetSession = useCallback(() => {
     // Clear existing timers
@@ -21,6 +22,9 @@ export const useSessionManager = (options: SessionManagerOptions) => {
     }
     if (warningTimerRef.current) {
       clearTimeout(warningTimerRef.current);
+    }
+    if (inactivityCheckRef.current) {
+      clearTimeout(inactivityCheckRef.current);
     }
 
     // Reset activity timestamp
@@ -39,6 +43,15 @@ export const useSessionManager = (options: SessionManagerOptions) => {
       setTimeRemaining(options.warningTimeout / 1000);
       options.onShowWarning();
     }, options.sessionTimeout - options.warningTimeout);
+
+    // Set inactivity check (check every minute for absolute inactivity)
+    inactivityCheckRef.current = setInterval(() => {
+      const timeSinceLastActivity = Date.now() - lastActivityRef.current;
+      if (timeSinceLastActivity >= options.sessionTimeout) {
+        // User has been inactive for the full session timeout
+        options.onSessionExpired();
+      }
+    }, 60000); // Check every minute
   }, [options]);
 
   const extendSession = useCallback(() => {
@@ -52,6 +65,9 @@ export const useSessionManager = (options: SessionManagerOptions) => {
     }
     if (warningTimerRef.current) {
       clearTimeout(warningTimerRef.current);
+    }
+    if (inactivityCheckRef.current) {
+      clearInterval(inactivityCheckRef.current);
     }
     
     setIsWarningShown(false);
@@ -100,6 +116,14 @@ export const useSessionManager = (options: SessionManagerOptions) => {
       document.addEventListener(event, handleActivity, true);
     });
 
+    // Check if user has been inactive for too long on mount
+    const timeSinceLastActivity = Date.now() - lastActivityRef.current;
+    if (timeSinceLastActivity >= options.sessionTimeout) {
+      // User has been inactive for the full session timeout
+      options.onSessionExpired();
+      return;
+    }
+
     // Initial session setup
     resetSession();
 
@@ -113,6 +137,9 @@ export const useSessionManager = (options: SessionManagerOptions) => {
       }
       if (warningTimerRef.current) {
         clearTimeout(warningTimerRef.current);
+      }
+      if (inactivityCheckRef.current) {
+        clearInterval(inactivityCheckRef.current);
       }
     };
   }, [handleUserActivity, resetSession]);

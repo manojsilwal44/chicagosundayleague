@@ -1,7 +1,6 @@
-import { PrismaClient, Prisma } from '../generated/prisma';
+import { Prisma } from '../generated/prisma';
 import { EventStatus, EventType, ParticipantStatus } from '../generated/prisma';
-
-const prisma = new PrismaClient();
+import { prisma } from './prisma';
 
 export interface CreateEventData {
   title: string;
@@ -27,6 +26,7 @@ export interface CreateEventData {
   coverImage?: string;
   tags?: string[];
   categoryIds?: string[];
+  status?: EventStatus;
   
   // Event-specific details
   sportType?: string;
@@ -84,7 +84,7 @@ export class EventService {
       const event = await tx.event.create({
         data: {
           ...eventData,
-          status: EventStatus.DRAFT,
+          status: data.status || EventStatus.DRAFT,
           isFree: eventData.isFree ?? (eventData.costPerPerson === 0 || !eventData.costPerPerson),
           tags: eventData.tags || [],
           categories: categoryIds ? {
