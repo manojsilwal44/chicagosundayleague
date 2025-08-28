@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import NavBar from "./components/NavBar";
 import Footer from "./components/Footer";
 import { Box, Card, CardContent, CardActions, Typography, Button, Paper, InputBase, IconButton } from "@mui/material";
@@ -19,15 +20,26 @@ type EventDto = {
   id: string;
   title: string;
   location: string;
-  gameType: "SOCCER" | "CRICKET" | "COOKING" | "TECH" | "WELLNESS";
+  eventType: "SOCCER" | "CRICKET" | "TENNIS" | "VOLLEYBALL" | "PICKLEBALL" | "VIDEO_GAMES" | "COOKING" | "TECH" | "WELLNESS" | "OTHER";
   startTime: string;
-  maxPlayers: number;
+  maxParticipants: number;
   participants: { id: string }[];
-  host?: string; // Added host field
-  price?: string; // Added price field
+  organizer?: {
+    profile?: {
+      firstName: string;
+      lastName: string;
+      displayName?: string;
+    };
+  };
+  isFree?: boolean;
+  costPerPerson?: number;
+  _count?: {
+    participants: number;
+  };
 };
 
 export default function Home() {
+  const router = useRouter();
   const [events, setEvents] = React.useState<EventDto[]>([]);
   const [q, setQ] = React.useState("");
   
@@ -55,8 +67,13 @@ export default function Home() {
     fetchEvents();
   }, [fetchEvents]);
 
-  // Use placeholder events when no events are fetched
-  const displayEvents = events.length > 0 ? events : defaultEvents;
+  // Handle event tile click to navigate to detail page
+  const handleEventClick = (eventId: string) => {
+    router.push(`/events/${eventId}`);
+  };
+
+  // Use only real events from the database
+  const displayEvents = events;
 
   return (
     <>
@@ -305,12 +322,27 @@ export default function Home() {
       <Box sx={{ px: { xs: 3, sm: 4, md: 6 }, py: 6, bgcolor: '#fff' }}>
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "1fr 1fr 1fr" }, gap: 4 }}>
           {displayEvents.map(ev => (
-            <Card key={ev.id} elevation={2} sx={{ borderRadius: 2, overflow: 'hidden' }}>
+            <Card 
+              key={ev.id} 
+              elevation={2} 
+              onClick={() => handleEventClick(ev.id)}
+              sx={{ 
+                borderRadius: 2, 
+                overflow: 'hidden',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  elevation: 6,
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 25px rgba(0,0,0,0.15)'
+                }
+              }}
+            >
               <Box
                 sx={{
                   height: 200,
                   bgcolor: "grey.200",
-                  backgroundImage: `url(${getEventImage(ev.title)})`,
+                  backgroundImage: `url(${getEventImage(ev.title, ev.eventType)})`,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                   backgroundRepeat: "no-repeat",
@@ -321,7 +353,7 @@ export default function Home() {
                   {ev.title}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mb: 1.5, fontWeight: 600 }}>
-                  Hosted by: {ev.host || 'Event Organizer'}
+                  Hosted by: {getOrganizerName(ev.organizer) || 'Event Organizer'}
                 </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -341,13 +373,13 @@ export default function Home() {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <CheckCircleIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
                     <Typography variant="body2" sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
-                      {ev.participants.length} going
+                      {ev._count?.participants || ev.participants?.length || 0} going
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <ConfirmationNumberIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
                     <Typography variant="body2" sx={{ fontSize: '0.875rem', fontWeight: 500, color: 'success.main' }}>
-                      {ev.price || 'Free'}
+                      {getEventPrice(ev)}
                     </Typography>
                   </Box>
                 </Box>
@@ -356,6 +388,11 @@ export default function Home() {
                 <Button 
                   variant="contained" 
                   size="small" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Handle join event logic here
+                    console.log('Join event:', ev.id);
+                  }}
                   sx={{ 
                     bgcolor: 'primary.main',
                     '&:hover': { bgcolor: 'primary.dark' }
@@ -386,15 +423,47 @@ function formatEventDate(dateString: string): string {
   }
 }
 
-function getEventImage(title: string): string {
-  const images = {
-    "Outdoor Dinner at Johnny's Kitchen & Tap in Glenview": "https://images.pexels.com/photos/1190297/pexels-photo-1190297.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop",
-    "Tech Conference 2025": "https://images.pexels.com/photos/1540575467063-178a50c2df87?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&h=300&q=80",
-    "Tech Retreat Weekend": "https://images.pexels.com/photos/1515187029135-18ee286d815b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&h=300&q=80",
-    "Yoga Retreat": "https://images.pexels.com/photos/1506905925346-21bda4d32df4?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&h=300&q=80"
+function getEventImage(title: string, eventType?: string): string {
+  // Map event types to appropriate images
+  const typeImages = {
+    "SOCCER": "https://images.pexels.com/photos/274506/pexels-photo-274506.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop",
+    "CRICKET": "https://images.pexels.com/photos/163452/cricket-ball-cricket-ball-163452.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop",
+    "TENNIS": "https://images.pexels.com/photos/209977/pexels-photo-209977.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop",
+    "VOLLEYBALL": "https://images.pexels.com/photos/1666927/pexels-photo-1666927.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop",
+    "PICKLEBALL": "https://images.pexels.com/photos/17806/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop",
+    "VIDEO_GAMES": "https://images.pexels.com/photos/442576/pexels-photo-442576.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop",
+    "COOKING": "https://images.pexels.com/photos/1190297/pexels-photo-1190297.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop",
+    "TECH": "https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop",
+    "WELLNESS": "https://images.pexels.com/photos/3822622/pexels-photo-3822622.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop",
+    "OTHER": "https://images.pexels.com/photos/2774556/pexels-photo-2774556.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop"
   };
   
-  return images[title as keyof typeof images] || "https://images.pexels.com/photos/2774556/pexels-photo-2774556.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop";
+  // Use event type image if available, otherwise use default
+  if (eventType && typeImages[eventType as keyof typeof typeImages]) {
+    return typeImages[eventType as keyof typeof typeImages];
+  }
+  
+  return typeImages.OTHER;
+}
+
+function getOrganizerName(organizer?: EventDto['organizer']): string {
+  if (!organizer?.profile) return 'Event Organizer';
+  
+  const { firstName, lastName, displayName } = organizer.profile;
+  
+  if (displayName) return displayName;
+  if (firstName && lastName) return `${firstName} ${lastName}`;
+  if (firstName) return firstName;
+  
+  return 'Event Organizer';
+}
+
+function getEventPrice(event: EventDto): string {
+  if (event.isFree === true || event.costPerPerson === 0 || !event.costPerPerson) {
+    return 'Free';
+  }
+  
+  return `$${event.costPerPerson}`;
 }
 
 function getHeroImage(): string {
@@ -413,49 +482,4 @@ function getHeroImage(): string {
   return heroImages[0]; // Using the first image for consistency
 }
 
-const defaultEvents: EventDto[] = [
-  {
-    id: "1",
-    title: "Outdoor Dinner at Johnny's Kitchen & Tap in Glenview",
-    location: "Glenview, IL",
-    gameType: "COOKING",
-    startTime: "2025-08-26T18:00:00Z",
-    maxPlayers: 50,
-    participants: Array.from({ length: 30 }, (_, i) => ({ id: `p${i}` })),
-    host: "NW Suburban Fun Club for Singles over 50",
-    price: "Free",
-  },
-  {
-    id: "2",
-    title: "Tech Conference 2025",
-    location: "Chicago, IL",
-    gameType: "TECH",
-    startTime: "2025-01-16T09:00:00Z",
-    maxPlayers: 200,
-    participants: Array.from({ length: 45 }, (_, i) => ({ id: `p${i}` })),
-    host: "Chicago Tech Meetup",
-    price: "$50",
-  },
-  {
-    id: "3",
-    title: "Tech Retreat Weekend",
-    location: "Lake Geneva, WI",
-    gameType: "TECH",
-    startTime: "2025-01-17T10:00:00Z",
-    maxPlayers: 100,
-    participants: Array.from({ length: 28 }, (_, i) => ({ id: `p${i}` })),
-    host: "Midwest Developers Association",
-    price: "$100",
-  },
-  {
-    id: "4",
-    title: "Yoga Retreat",
-    location: "Milwaukee, WI",
-    gameType: "WELLNESS",
-    startTime: "2025-01-18T08:00:00Z",
-    maxPlayers: 30,
-    participants: Array.from({ length: 15 }, (_, i) => ({ id: `p${i}` })),
-    host: "Mindful Living Center",
-    price: "Free",
-  },
-];
+

@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { EventService } from "@/lib/eventService";
-import { EventType, EventStatus } from "@/generated/prisma";
 import { Prisma } from "@/generated/prisma";
 
-const createEventSchema = z.object({
+const publishEventSchema = z.object({
   title: z.string().min(3),
   summary: z.string().max(140).optional(),
   description: z.string().optional(),
@@ -27,45 +26,21 @@ const createEventSchema = z.object({
   customFields: z.record(z.string(), z.unknown()).optional(),
 });
 
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    
-    const eventType = searchParams.get("eventType") as EventType | null;
-    const status = searchParams.get("status") as EventStatus | null;
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const offset = parseInt(searchParams.get("offset") || "0");
-    
-    // Use real EventService for production
-    const result = await EventService.getEvents({
-      eventType: eventType || undefined,
-      status: status || undefined,
-      limit,
-      offset,
-    });
-
-    // Return just the events array for the frontend
-    return NextResponse.json(result.events);
-  } catch (error) {
-    console.error("Error fetching events:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch events" },
-      { status: 500 }
-    );
-  }
-}
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     
-    const parsed = createEventSchema.safeParse(body);
+    console.log('Received request body:', body);
+    
+    const parsed = publishEventSchema.safeParse(body);
     
     if (!parsed.success) {
+      console.error('Validation error:', parsed.error.flatten());
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
     const eventData = parsed.data;
+    console.log('Parsed event data:', eventData);
     
     // Use real EventService for production
     const event = await EventService.createEvent({
@@ -74,21 +49,28 @@ export async function POST(req: NextRequest) {
       endTime: eventData.endTime ? new Date(eventData.endTime) : undefined,
       costPerPerson: eventData.costPerPerson || 0,
       isFree: !eventData.costPerPerson || eventData.costPerPerson === 0,
+      status: "PUBLISHED",
       customFields: eventData.customFields as Prisma.InputJsonValue | undefined,
     });
 
+    console.log('Event created successfully:', event);
+
     return NextResponse.json({
-      message: "Event created successfully",
+      message: "Event published successfully",
       event
     }, { status: 201 });
 
   } catch (error) {
-    console.error("Error creating event:", error);
+    console.error("Error publishing event:", error);
+    console.error("Error message:", error instanceof Error ? error.message : 'Unknown error');
+    console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+    
     return NextResponse.json(
-      { error: "Failed to create event" },
+      { 
+        error: "Failed to publish event",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
 }
-
-

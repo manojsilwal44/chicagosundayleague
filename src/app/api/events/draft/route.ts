@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { EventService } from "@/lib/eventService";
-import { EventType, EventStatus } from "@/generated/prisma";
 import { Prisma } from "@/generated/prisma";
 
-const createEventSchema = z.object({
+const draftEventSchema = z.object({
   title: z.string().min(3),
   summary: z.string().max(140).optional(),
   description: z.string().optional(),
@@ -27,39 +26,11 @@ const createEventSchema = z.object({
   customFields: z.record(z.string(), z.unknown()).optional(),
 });
 
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    
-    const eventType = searchParams.get("eventType") as EventType | null;
-    const status = searchParams.get("status") as EventStatus | null;
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const offset = parseInt(searchParams.get("offset") || "0");
-    
-    // Use real EventService for production
-    const result = await EventService.getEvents({
-      eventType: eventType || undefined,
-      status: status || undefined,
-      limit,
-      offset,
-    });
-
-    // Return just the events array for the frontend
-    return NextResponse.json(result.events);
-  } catch (error) {
-    console.error("Error fetching events:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch events" },
-      { status: 500 }
-    );
-  }
-}
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     
-    const parsed = createEventSchema.safeParse(body);
+    const parsed = draftEventSchema.safeParse(body);
     
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -74,21 +45,20 @@ export async function POST(req: NextRequest) {
       endTime: eventData.endTime ? new Date(eventData.endTime) : undefined,
       costPerPerson: eventData.costPerPerson || 0,
       isFree: !eventData.costPerPerson || eventData.costPerPerson === 0,
+      status: "DRAFT",
       customFields: eventData.customFields as Prisma.InputJsonValue | undefined,
     });
 
     return NextResponse.json({
-      message: "Event created successfully",
+      message: "Event saved as draft successfully",
       event
     }, { status: 201 });
 
   } catch (error) {
-    console.error("Error creating event:", error);
+    console.error("Error saving event as draft:", error);
     return NextResponse.json(
-      { error: "Failed to create event" },
+      { error: "Failed to save event as draft" },
       { status: 500 }
     );
   }
 }
-
-

@@ -11,6 +11,8 @@ import {
   TextField,
   Alert,
   Snackbar,
+  Divider,
+  Link,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import StarIcon from "@mui/icons-material/Star";
@@ -28,9 +30,10 @@ interface SignupModalProps {
   mode: "signup" | "login";
   onSignupSuccess: (userData: UserData) => void;
   onLoginSuccess: (userData: UserData) => void;
+  onSwitchMode: (mode: "signup" | "login") => void;
 }
 
-export default function SignupModal({ open, onClose, mode, onSignupSuccess, onLoginSuccess }: SignupModalProps) {
+export default function SignupModal({ open, onClose, mode, onSignupSuccess, onLoginSuccess, onSwitchMode }: SignupModalProps) {
   const [formData, setFormData] = React.useState({
     firstName: "",
     lastName: "",
@@ -48,6 +51,19 @@ export default function SignupModal({ open, onClose, mode, onSignupSuccess, onLo
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: "" }));
     }
+  };
+
+  const handleModeSwitch = (newMode: "login" | "signup") => {
+    // Clear form data and errors when switching modes
+    setFormData({
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    });
+    setErrors({});
+    onSwitchMode(newMode);
   };
 
   const validateForm = () => {
@@ -478,6 +494,32 @@ export default function SignupModal({ open, onClose, mode, onSignupSuccess, onLo
             >
               {isLoading ? (isSignup ? "Creating Account..." : "Logging in...") : continueText}
             </Button>
+
+            {/* Mode Switch Section */}
+            <Box sx={{ mt: 3, pt: 3 }}>
+              <Divider sx={{ mb: 3, bgcolor: "rgba(0, 0, 0, 0.08)" }} />
+              <Box sx={{ textAlign: "center" }}>
+                <Typography variant="body2" sx={{ color: "rgba(0, 0, 0, 0.6)", mb: 1 }}>
+                  {isSignup ? "Already have an account?" : "Don't have an account?"}
+                </Typography>
+                <Link
+                  component="button"
+                  variant="body2"
+                  onClick={() => handleModeSwitch(isSignup ? "login" : "signup")}
+                  sx={{
+                    color: "#1976d2",
+                    fontWeight: 600,
+                    textDecoration: "none",
+                    cursor: "pointer",
+                    "&:hover": {
+                      textDecoration: "underline",
+                    },
+                  }}
+                >
+                  {isSignup ? "Sign in" : "Sign up"}
+                </Link>
+              </Box>
+            </Box>
           </Box>
         </DialogContent>
       </Dialog>

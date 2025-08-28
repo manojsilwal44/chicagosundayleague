@@ -38,18 +38,17 @@ export default function NavBar() {
     }
   } as const;
   
-  const handleOpenSignupModal = () => {
-    setAuthMode("signup");
-    setAuthModalOpen(true);
-  };
-
-  const handleOpenLoginModal = () => {
-    setAuthMode("login");
+  const handleOpenAuthModal = () => {
+    setAuthMode("login"); // Always start with login
     setAuthModalOpen(true);
   };
   
   const handleCloseAuthModal = () => {
     setAuthModalOpen(false);
+  };
+
+  const handleSwitchAuthMode = (newMode: "login" | "signup") => {
+    setAuthMode(newMode);
   };
 
   const handleSignupSuccess = (userData: UserData) => {
@@ -179,39 +178,30 @@ export default function NavBar() {
                 <Button color="inherit" onClick={handleLogout} sx={{ textTransform: "none", fontSize: 16, fontWeight: 500 }}>Log Out</Button>
               </>
             ) : (
-              <>
-                <Button 
-                  color="inherit" 
-                  onClick={handleOpenLoginModal} 
-                  sx={{ 
-                    textTransform: "none",
-                    fontSize: 16,
-                    fontWeight: 500,
-                    color: "rgba(0, 0, 0, 0.87)",
-                    "&:hover": {
-                      backgroundColor: "rgba(0, 0, 0, 0.04)"
-                    }
-                  }}
-                >
-                  Login
-                </Button>
-                <Button 
-                  variant="contained" 
-                  onClick={handleOpenSignupModal} 
-                  sx={{ 
-                    textTransform: "none", 
-                    fontSize: 16,
-                    fontWeight: 500,
-                    borderRadius: 2,
-                    bgcolor: "#1976d2",
-                    "&:hover": {
-                      bgcolor: "#1565c0"
-                    }
-                  }}
-                >
-                  Sign Up
-                </Button>
-              </>
+              <Button 
+                variant="contained" 
+                onClick={handleOpenAuthModal} 
+                sx={{ 
+                  textTransform: "none", 
+                  fontSize: 16,
+                  fontWeight: 500,
+                  borderRadius: 3,
+                  bgcolor: "#1a1a1a",
+                  color: "#ffffff",
+                  px: 2,
+                  py: 1,
+                  boxShadow: "none",
+                  "&:hover": {
+                    bgcolor: "#2a2a2a",
+                    boxShadow: "none"
+                  },
+                  "&:active": {
+                    bgcolor: "#0a0a0a"
+                  }
+                }}
+              >
+                Login / Sign Up
+              </Button>
             )}
           </Box>
         </Toolbar>
@@ -224,6 +214,7 @@ export default function NavBar() {
         onSignupSuccess={handleSignupSuccess} 
         onLoginSuccess={handleLoginSuccess} 
         mode={authMode} 
+        onSwitchMode={handleSwitchAuthMode}
       />
       
       <SessionWarningModal

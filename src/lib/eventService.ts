@@ -64,32 +64,46 @@ export interface EventFilters {
 export class EventService {
   // Create a new event with normalized structure
   static async createEvent(data: CreateEventData) {
-    const {
-      categoryIds,
-      sportType,
-      skillLevel,
-      equipment,
-      rules,
-      format,
-      duration,
-      materials,
-      intensity,
-      ageGroup,
-      customFields,
-      ...eventData
-    } = data;
-
-    return await prisma.$transaction(async (tx) => {
-      // Create the main event
-      const event = await tx.event.create({
+    try {
+      console.log('Creating event with data:', data);
+      
+      // Check if user exists
+      const user = await prisma.user.findUnique({
+        where: { id: data.organizerId }
+      });
+      console.log('User found:', user ? 'Yes' : 'No');
+      
+      if (!user) {
+        throw new Error(`User with ID ${data.organizerId} not found`);
+      }
+      
+      // Create the event in the database
+      const event = await prisma.event.create({
         data: {
-          ...eventData,
-          status: data.status || EventStatus.DRAFT,
-          isFree: eventData.isFree ?? (eventData.costPerPerson === 0 || !eventData.costPerPerson),
-          tags: eventData.tags || [],
-          categories: categoryIds ? {
-            connect: categoryIds.map(id => ({ id }))
-          } : undefined,
+          title: data.title,
+          summary: data.summary,
+          description: data.description,
+          eventType: data.eventType,
+          status: data.status || EventStatus.PUBLISHED,
+          startTime: data.startTime,
+          endTime: data.endTime,
+          timezone: data.timezone,
+          location: data.location,
+          address: data.address,
+          city: data.city,
+          state: data.state,
+          country: data.country,
+          postalCode: data.postalCode,
+          isOnline: data.isOnline || false,
+          onlineUrl: data.onlineUrl,
+          maxParticipants: data.maxParticipants,
+          minParticipants: data.minParticipants,
+          costPerPerson: data.costPerPerson,
+          isFree: data.isFree ?? (data.costPerPerson === 0 || !data.costPerPerson),
+          organizerId: data.organizerId,
+          coverImage: data.coverImage,
+          tags: data.tags || [],
+          publishedAt: (data.status === EventStatus.PUBLISHED || !data.status) ? new Date() : null,
         },
         include: {
           organizer: {
@@ -98,31 +112,37 @@ export class EventService {
             }
           },
           categories: true,
-          eventDetails: true,
         }
       });
 
-      // Create event details if specific fields are provided
-      if (sportType || skillLevel || equipment || rules || format || duration || materials || intensity || ageGroup || customFields) {
-        await tx.eventDetails.create({
+      // Create event details if provided
+      if (data.sportType || data.skillLevel || data.equipment || data.rules || 
+          data.format || data.duration || data.materials || data.intensity || 
+          data.ageGroup || data.customFields) {
+        await prisma.eventDetails.create({
           data: {
             eventId: event.id,
-            sportType,
-            skillLevel,
-            equipment,
-            rules,
-            format,
-            duration,
-            materials,
-            intensity,
-            ageGroup,
-            customFields,
+            sportType: data.sportType,
+            skillLevel: data.skillLevel,
+            equipment: data.equipment,
+            rules: data.rules,
+            format: data.format,
+            duration: data.duration,
+            materials: data.materials,
+            intensity: data.intensity,
+            ageGroup: data.ageGroup,
+            customFields: data.customFields,
           }
         });
       }
 
+      console.log('Event created successfully:', event);
       return event;
-    });
+    } catch (error) {
+      console.error('CreateEvent error:', error);
+      console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
+      throw error;
+    }
   }
 
   // Update an existing event
@@ -223,31 +243,54 @@ export class EventService {
 
   // Get events with filtering and pagination
   static async getEvents(filters: EventFilters = {}) {
-    const {
-      limit = 20,
-      offset = 0,
-      ...filterData
-    } = filters;
+    try {
+      const {
+        eventType,
+        status = EventStatus.PUBLISHED, // Default to published events only
+        location,
+        startTime,
+        endTime,
+        isOnline,
+        isFree,
+        organizerId,
+        tags,
+        categoryIds,
+        limit = 20,
+        offset = 0,
+      } = filters;
 
-    const where: Record<string, unknown> = {};
+      // Build where clause
+      const where: Prisma.EventWhereInput = {
+        isActive: true,
+        status: status || EventStatus.PUBLISHED,
+      };
 
-    if (filterData.eventType) where.eventType = filterData.eventType;
-    if (filterData.status) where.status = filterData.status;
-    if (filterData.location) where.location = { contains: filterData.location, mode: 'insensitive' };
-    if (filterData.isOnline !== undefined) where.isOnline = filterData.isOnline;
-    if (filterData.isFree !== undefined) where.isFree = filterData.isFree;
-    if (filterData.organizerId) where.organizerId = filterData.organizerId;
-    if (filterData.tags && filterData.tags.length > 0) {
-      where.tags = { hasSome: filterData.tags };
-    }
-    if (filterData.startTime) where.startTime = { gte: filterData.startTime };
-    if (filterData.endTime) where.startTime = { lte: filterData.endTime };
-    if (filterData.categoryIds && filterData.categoryIds.length > 0) {
-      where.categories = { some: { id: { in: filterData.categoryIds } } };
-    }
+      if (eventType) where.eventType = eventType;
+      if (location) {
+        where.OR = [
+          { location: { contains: location, mode: 'insensitive' } },
+          { city: { contains: location, mode: 'insensitive' } },
+          { state: { contains: location, mode: 'insensitive' } },
+        ];
+      }
+      if (startTime) where.startTime = { gte: startTime };
+      if (endTime) where.endTime = { lte: endTime };
+      if (isOnline !== undefined) where.isOnline = isOnline;
+      if (isFree !== undefined) where.isFree = isFree;
+      if (organizerId) where.organizerId = organizerId;
+      if (tags && tags.length > 0) {
+        where.tags = { hasSome: tags };
+      }
+      if (categoryIds && categoryIds.length > 0) {
+        where.categories = {
+          some: {
+            id: { in: categoryIds }
+          }
+        };
+      }
 
-    const [events, total] = await Promise.all([
-      prisma.event.findMany({
+      // Get events with all necessary data
+      const events = await prisma.event.findMany({
         where,
         include: {
           organizer: {
@@ -256,38 +299,48 @@ export class EventService {
             }
           },
           categories: true,
-          eventDetails: true,
           participants: {
-            where: { status: ParticipantStatus.CONFIRMED },
-            include: {
-              user: {
-                include: {
-                  profile: true
-                }
+            where: {
+              status: {
+                in: [ParticipantStatus.REGISTERED, ParticipantStatus.CONFIRMED]
               }
             }
           },
           _count: {
             select: {
-              participants: true,
-              reviews: true,
+              participants: {
+                where: {
+                  status: {
+                    in: [ParticipantStatus.REGISTERED, ParticipantStatus.CONFIRMED]
+                  }
+                }
+              }
             }
           }
         },
         orderBy: { startTime: 'asc' },
-        take: limit,
         skip: offset,
-      }),
-      prisma.event.count({ where })
-    ]);
+        take: limit,
+      });
 
-    return {
-      events,
-      total,
-      hasMore: offset + limit < total,
-      page: Math.floor(offset / limit) + 1,
-      totalPages: Math.ceil(total / limit),
-    };
+      // Get total count for pagination
+      const total = await prisma.event.count({ where });
+
+      const totalPages = Math.ceil(total / limit);
+      const currentPage = Math.floor(offset / limit) + 1;
+      const hasMore = currentPage < totalPages;
+
+      return {
+        events,
+        total,
+        hasMore,
+        page: currentPage,
+        totalPages,
+      };
+    } catch (error) {
+      console.error('EventService.getEvents error:', error);
+      throw error;
+    }
   }
 
   // Get a single event by ID

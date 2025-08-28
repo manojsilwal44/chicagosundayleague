@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
@@ -14,183 +8,274 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Enhanced User Profile model with normalization
-model UserProfile {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  firstName   String
-  lastName    String
-  displayName String?
-  bio         String?
-  avatar      String?
-  phone       String?
-  dateOfBirth DateTime?
-  gender      Gender?
-  location    String?
-  timezone    String?
-  
-  // Social media links (expandable)
-  socialLinks SocialLink[]
-  
-  // User preferences
-  preferences UserPreferences?
-  
-  // Timestamps
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([firstName, lastName])
-  @@index([location])
-}
-
-// Enhanced User model for authentication
-model User {
-  id             String    @id @default(cuid())
-  email          String    @unique
-  emailVerified  DateTime?
-  
-  // Profile relation
-  profile        UserProfile?
-  
-  // Authentication methods (expandable for future SSO)
-  accounts       Account[]
-  sessions       Session[]
-  
-  // Password-based authentication
-  passwordHash   String?
-  passwordSalt   String?
-  passwordResetToken String?
-  passwordResetExpires DateTime?
-  
-  // Account status
-  isActive       Boolean   @default(true)
-  isVerified     Boolean   @default(false)
-  lastLoginAt    DateTime?
-  
-  // Event relationships
-  events         Event[]    @relation("OrganizerEvents")
-  participations Participant[]
-  eventReviews   EventReview[]
-  eventWaitlist  EventWaitlist[]
-  
-  // Timestamps
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  
-  @@index([email])
-  @@index([isActive])
-}
-
-// Enhanced Account model for OAuth/SSO providers
 model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String  // oauth, oidc, email
-  provider          String  // google, apple, facebook, email
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
+  id                 String   @id
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
   oauth_token_secret String?
   oauth_token        String?
-  
-  // Additional SSO metadata
-  providerData      Json?   // Store provider-specific data
-  isVerified        Boolean @default(false)
-  
-  // Timestamps
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  providerData       Json?
+  isVerified         Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  User               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([provider, providerAccountId])
   @@index([provider])
   @@index([userId])
 }
 
-// Social media links for user profiles
-model SocialLink {
-  id       String   @id @default(cuid())
-  profileId String
-  platform String   // twitter, linkedin, instagram, etc.
-  url      String
-  username String?
-  
-  // Relations
-  profile  UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
-  @@unique([profileId, platform])
-  @@index([platform])
+model Event {
+  id              String          @id @default(cuid())
+  title           String
+  summary         String?
+  description     String?
+  eventType       EventType
+  status          EventStatus     @default(DRAFT)
+  startTime       DateTime
+  endTime         DateTime?
+  timezone        String?
+  location        String
+  address         String?
+  city            String?
+  state           String?
+  country         String?
+  postalCode      String?
+  isOnline        Boolean         @default(false)
+  onlineUrl       String?
+  maxParticipants Int
+  minParticipants Int?
+  costPerPerson   Decimal?        @db.Decimal(10, 2)
+  isFree          Boolean         @default(true)
+  organizerId     String
+  coverImage      String?
+  tags            String[]
+  isPublic        Boolean         @default(true)
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  publishedAt     DateTime?
+  organizer       User            @relation("OrganizerEvents", fields: [organizerId], references: [id], onDelete: Cascade)
+  eventDetails    EventDetails?
+  images          EventImage[]
+  reviews         EventReview[]
+  waitlist        EventWaitlist[]
+  participants    Participant[]
+  categories      EventCategory[] @relation("EventToEventCategory")
+
+  @@index([eventType])
+  @@index([isActive])
+  @@index([location])
+  @@index([organizerId])
+  @@index([startTime])
+  @@index([status])
+  @@index([tags])
 }
 
-// User preferences for customization
-model UserPreferences {
-  id                String   @id @default(cuid())
-  profileId         String   @unique
-  language          String   @default("en")
-  theme             String   @default("light")
-  emailNotifications Boolean @default(true)
-  pushNotifications Boolean @default(true)
-  privacyLevel      PrivacyLevel @default(PUBLIC)
-  
-  // Event preferences
-  eventNotifications Boolean @default(true)
-  maxEventDistance  Int?     // in miles/km
-  
-  // Relations
-  profile           UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
-  // Timestamps
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+model EventCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  icon        String?
+  color       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  events      Event[]         @relation("EventToEventCategory")
+
+  @@index([isActive])
+  @@index([name])
 }
 
-// Session management
+model EventDetails {
+  id           String  @id @default(cuid())
+  eventId      String  @unique
+  sportType    String?
+  skillLevel   String?
+  equipment    String?
+  rules        String?
+  format       String?
+  duration     Int?
+  materials    String?
+  intensity    String?
+  ageGroup     String?
+  customFields Json?
+  Event        Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([format])
+  @@index([skillLevel])
+  @@index([sportType])
+}
+
+model EventImage {
+  id        String   @id @default(cuid())
+  eventId   String
+  imageUrl  String
+  altText   String?
+  isPrimary Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  Event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([isPrimary])
+}
+
+model EventReview {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  rating    Int
+  comment   String?
+  isPublic  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([eventId])
+  @@index([rating])
+}
+
+model EventWaitlist {
+  id         String    @id @default(cuid())
+  eventId    String
+  userId     String
+  position   Int
+  joinedAt   DateTime  @default(now())
+  notifiedAt DateTime?
+  Event      Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  User       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([eventId])
+  @@index([position])
+}
+
+model Participant {
+  id               String            @id @default(cuid())
+  userId           String
+  eventId          String
+  joinedAt         DateTime          @default(now())
+  status           ParticipantStatus @default(REGISTERED)
+  notes            String?
+  waitlistPosition Int?
+  hasPaid          Boolean           @default(false)
+  paymentAmount    Decimal?          @db.Decimal(10, 2)
+  paymentMethod    String?
+  event            Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([eventId])
+  @@index([hasPaid])
+  @@index([status])
+}
+
 model Session {
-  id           String   @id @default(cuid())
+  id           String   @id
   sessionToken String   @unique
   userId       String
   expires      DateTime
   ipAddress    String?
   userAgent    String?
-  
-  // Relations
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([userId])
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([expires])
+  @@index([userId])
 }
 
-// Email verification tokens
+model SocialLink {
+  id          String      @id
+  profileId   String
+  platform    String
+  url         String
+  username    String?
+  UserProfile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, platform])
+  @@index([platform])
+}
+
+model User {
+  id                   String          @id @default(cuid())
+  email                String          @unique
+  emailVerified        DateTime?
+  passwordHash         String?
+  passwordSalt         String?
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
+  isActive             Boolean         @default(true)
+  isVerified           Boolean         @default(false)
+  lastLoginAt          DateTime?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  accounts             Account[]
+  events               Event[]          @relation("OrganizerEvents")
+  EventReview          EventReview[]
+  EventWaitlist        EventWaitlist[]
+  Participant          Participant[]
+  Session              Session[]
+  profile              UserProfile?
+
+  @@index([email])
+  @@index([isActive])
+}
+
+model UserPreferences {
+  id                 String       @id @default(cuid())
+  profileId          String       @unique
+  language           String       @default("en")
+  theme              String       @default("light")
+  emailNotifications Boolean      @default(true)
+  pushNotifications  Boolean      @default(true)
+  privacyLevel       PrivacyLevel @default(PUBLIC)
+  eventNotifications Boolean      @default(true)
+  maxEventDistance   Int?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  UserProfile        UserProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model UserProfile {
+  id              String           @id @default(cuid())
+  userId          String           @unique
+  firstName       String
+  lastName        String
+  displayName     String?
+  bio             String?
+  avatar          String?
+  phone           String?
+  dateOfBirth     DateTime?
+  gender          Gender?
+  location        String?
+  timezone        String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  SocialLink      SocialLink[]
+  UserPreferences UserPreferences?
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([firstName, lastName])
+  @@index([location])
+}
+
 model VerificationToken {
   identifier String
   token      String   @unique
   expires    DateTime
-  
+
   @@unique([identifier, token])
-}
-
-// Enums
-enum Gender {
-  MALE
-  FEMALE
-  OTHER
-  PREFER_NOT_TO_SAY
-}
-
-enum PrivacyLevel {
-  PRIVATE
-  FRIENDS_ONLY
-  PUBLIC
 }
 
 enum EventStatus {
@@ -214,6 +299,13 @@ enum EventType {
   OTHER
 }
 
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
 enum ParticipantStatus {
   REGISTERED
   CONFIRMED
@@ -222,203 +314,8 @@ enum ParticipantStatus {
   NO_SHOW
 }
 
-// Core Event model (normalized)
-model Event {
-  id          String      @id @default(cuid())
-  
-  // Basic Information
-  title       String
-  summary     String?     // Short description (140 chars max)
-  description String?     // Detailed description
-  
-  // Event Type and Status
-  eventType   EventType
-  status      EventStatus @default(DRAFT)
-  
-  // Timing
-  startTime   DateTime
-  endTime     DateTime?
-  timezone    String?
-  
-  // Location
-  location    String
-  address     String?
-  city        String?
-  state       String?
-  country     String?
-  postalCode  String?
-  isOnline    Boolean     @default(false)
-  onlineUrl   String?
-  
-  // Capacity and Pricing
-  maxParticipants Int
-  minParticipants Int?
-  costPerPerson   Decimal? @db.Decimal(10,2)
-  isFree          Boolean  @default(true)
-  
-  // Organizer
-  organizerId String
-  organizer   User       @relation("OrganizerEvents", fields: [organizerId], references: [id], onDelete: Cascade)
-  
-  // Media
-  coverImage  String?
-  images      EventImage[]
-  
-  // Metadata
-  tags        String[]
-  categories  EventCategory[]
-  isPublic    Boolean    @default(true)
-  isActive    Boolean    @default(true)
-  
-  // Timestamps
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  publishedAt DateTime?
-  
-  // Relations
-  participants Participant[]
-  eventDetails EventDetails?
-  reviews     EventReview[]
-  waitlist    EventWaitlist[]
-  
-  @@index([startTime])
-  @@index([eventType])
-  @@index([status])
-  @@index([isActive])
-  @@index([tags])
-  @@index([location])
-  @@index([organizerId])
-}
-
-// Event Details model for type-specific fields (expandable)
-model EventDetails {
-  id        String   @id @default(cuid())
-  eventId   String  @unique
-  
-  // Sports-specific fields
-  sportType String?  // For sports events
-  skillLevel String? // beginner, intermediate, advanced
-  equipment String?  // Required equipment
-  rules     String?  // Event-specific rules
-  
-  // Tech/Workshop fields
-  format    String?  // workshop, conference, meetup
-  duration  Int?     // Duration in minutes
-  materials String?  // Required materials
-  
-  // Wellness/Activity fields
-  intensity String?  // low, medium, high
-  ageGroup  String?  // target age group
-  
-  // Custom fields (JSON for future extensibility)
-  customFields Json?
-  
-  // Relations
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  
-  @@index([sportType])
-  @@index([skillLevel])
-  @@index([format])
-}
-
-// Event Categories for better organization
-model EventCategory {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  description String?
-  icon        String?
-  color       String?
-  isActive    Boolean  @default(true)
-  
-  // Relations
-  events      Event[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@index([name])
-  @@index([isActive])
-}
-
-// Event Images for multiple image support
-model EventImage {
-  id        String   @id @default(cuid())
-  eventId   String
-  imageUrl  String
-  altText   String?
-  isPrimary Boolean  @default(false)
-  order     Int      @default(0)
-  
-  // Relations
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  
-  createdAt DateTime @default(now())
-  
-  @@index([eventId])
-  @@index([isPrimary])
-}
-
-// Participant model (enhanced)
-model Participant {
-  id        String   @id @default(cuid())
-  userId    String
-  eventId   String
-  joinedAt  DateTime @default(now())
-  
-  // Enhanced fields
-  status    ParticipantStatus @default(REGISTERED)
-  notes     String?
-  waitlistPosition Int?
-  
-  // Payment information
-  hasPaid   Boolean  @default(false)
-  paymentAmount Decimal? @db.Decimal(10,2)
-  paymentMethod String?
-  
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, eventId])
-  @@index([eventId])
-  @@index([status])
-  @@index([hasPaid])
-}
-
-// Event Reviews and Ratings
-model EventReview {
-  id        String   @id @default(cuid())
-  eventId   String
-  userId    String
-  rating    Int      // 1-5 stars
-  comment   String?
-  isPublic  Boolean  @default(true)
-  
-  // Relations
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  @@unique([userId, eventId])
-  @@index([eventId])
-  @@index([rating])
-}
-
-// Event Waitlist for overflow management
-model EventWaitlist {
-  id        String   @id @default(cuid())
-  eventId   String
-  userId    String
-  position  Int
-  joinedAt  DateTime @default(now())
-  notifiedAt DateTime?
-  
-  // Relations
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, eventId])
-  @@index([eventId])
-  @@index([position])
+enum PrivacyLevel {
+  PRIVATE
+  FRIENDS_ONLY
+  PUBLIC
 }
